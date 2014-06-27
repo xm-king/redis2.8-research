@@ -163,16 +163,18 @@
 #define REDIS_CMD_SKIP_MONITOR 2048         /* "M" flag */
 
 /* Object types */
-#define REDIS_STRING 0
-#define REDIS_LIST 1
-#define REDIS_SET 2
-#define REDIS_ZSET 3
-#define REDIS_HASH 4
+//对象类型
+#define REDIS_STRING 0	//字符串
+#define REDIS_LIST 1	//列表
+#define REDIS_SET 2		//集合
+#define REDIS_ZSET 3	//有序表
+#define REDIS_HASH 4	//哈希表
 
 /* Objects encoding. Some kind of objects like Strings and Hashes can be
  * internally represented in multiple ways. The 'encoding' field of the object
  * is set to one of this fields for this object. */
-#define REDIS_ENCODING_RAW 0     /* Raw representation */
+//编码方式
+#define REDIS_ENCODING_RAW 0     /* Raw representation */	//字符串
 #define REDIS_ENCODING_INT 1     /* Encoded as integer */
 #define REDIS_ENCODING_HT 2      /* Encoded as hash table */
 #define REDIS_ENCODING_ZIPMAP 3  /* Encoded as zipmap */
@@ -383,11 +385,16 @@ typedef long long mstime_t; /* millisecond time type. */
 #define REDIS_LRU_BITS 24
 #define REDIS_LRU_CLOCK_MAX ((1<<REDIS_LRU_BITS)-1) /* Max value of obj->lru */
 #define REDIS_LRU_CLOCK_RESOLUTION 1 /* LRU clock resolution in seconds */
+//Redis对象
 typedef struct redisObject {
+	//对象类型
     unsigned type:4;
+    //编码方式
     unsigned encoding:4;
     unsigned lru:REDIS_LRU_BITS; /* lru time (relative to server.lruclock) */
+    //引用计数
     int refcount;
+    //指向对象的值
     void *ptr;
 } robj;
 
