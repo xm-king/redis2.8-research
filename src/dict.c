@@ -171,6 +171,7 @@ static void _dictReset(dictht *ht)
 }
 
 /* Create a new hash table */
+//创建新的字典
 dict *dictCreate(dictType *type,
         void *privDataPtr)
 {
@@ -207,6 +208,7 @@ int dictResize(dict *d)
 }
 
 /* Expand or create the hash table */
+//扩展HashTable，ReHash
 int dictExpand(dict *d, unsigned long size)
 {
     dictht n; /* the new hash table */
@@ -311,6 +313,7 @@ static void _dictRehashStep(dict *d) {
 }
 
 /* Add an element to the target hash table */
+//加入新的key-value
 int dictAdd(dict *d, void *key, void *val)
 {
     dictEntry *entry = dictAddRaw(d,key);
@@ -340,7 +343,7 @@ dictEntry *dictAddRaw(dict *d, void *key)
     int index;
     dictEntry *entry;
     dictht *ht;
-
+    //做一次rehash
     if (dictIsRehashing(d)) _dictRehashStep(d);
 
     /* Get the index of the new element, or -1 if
@@ -349,6 +352,8 @@ dictEntry *dictAddRaw(dict *d, void *key)
         return NULL;
 
     /* Allocate the memory and store the new entry */
+
+    //如果正在进行reHash操作的话，新加入的元素都要放在table1中
     ht = dictIsRehashing(d) ? &d->ht[1] : &d->ht[0];
     entry = zmalloc(sizeof(*entry));
     entry->next = ht->table[index];
@@ -486,6 +491,7 @@ dictEntry *dictFind(dict *d, const void *key)
     if (d->ht[0].size == 0) return NULL; /* We don't have a table at all */
     if (dictIsRehashing(d)) _dictRehashStep(d);
     h = dictHashKey(d, key);
+    //如果正在ReHash的话，两个Table都要查找
     for (table = 0; table <= 1; table++) {
         idx = h & d->ht[table].sizemask;
         he = d->ht[table].table[idx];
@@ -819,18 +825,21 @@ unsigned long dictScan(dict *d,
 /* ------------------------- private functions ------------------------------ */
 
 /* Expand the hash table if needed */
+//是否需要扩展字典
 static int _dictExpandIfNeeded(dict *d)
 {
     /* Incremental rehashing already in progress. Return. */
     if (dictIsRehashing(d)) return DICT_OK;
 
     /* If the hash table is empty expand it to the initial size. */
+    //初始化Table
     if (d->ht[0].size == 0) return dictExpand(d, DICT_HT_INITIAL_SIZE);
 
     /* If we reached the 1:1 ratio, and we are allowed to resize the hash
      * table (global setting) or we should avoid it but the ratio between
      * elements/buckets is over the "safe" threshold, we resize doubling
      * the number of buckets. */
+    //如果used/size >= 1 或者 used/size >= 5，需要对dict进行ReHash操作
     if (d->ht[0].used >= d->ht[0].size &&
         (dict_can_resize ||
          d->ht[0].used/d->ht[0].size > dict_force_resize_ratio))
@@ -859,6 +868,7 @@ static unsigned long _dictNextPower(unsigned long size)
  *
  * Note that if we are in the process of rehashing the hash table, the
  * index is always returned in the context of the second (new) hash table. */
+//计算key的index
 static int _dictKeyIndex(dict *d, const void *key)
 {
     unsigned int h, idx, table;
@@ -868,6 +878,7 @@ static int _dictKeyIndex(dict *d, const void *key)
     if (_dictExpandIfNeeded(d) == DICT_ERR)
         return -1;
     /* Compute the key hash value */
+    //计算key的hash值
     h = dictHashKey(d, key);
     for (table = 0; table <= 1; table++) {
         idx = h & d->ht[table].sizemask;
