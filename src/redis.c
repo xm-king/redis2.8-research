@@ -52,7 +52,7 @@
 #include <locale.h>
 
 /* Our shared "common" objects */
-
+//redis共享对象
 struct sharedObjectsStruct shared;
 
 /* Global vars that are actually used as constants. The following double
@@ -1202,7 +1202,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
 }
 
 /* =========================== Server initialization ======================== */
-
+//创建全局共享对象
 void createSharedObjects(void) {
     int j;
 
