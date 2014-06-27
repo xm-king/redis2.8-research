@@ -38,6 +38,7 @@
  * by the user before to call AlFreeList().
  *
  * On error, NULL is returned. Otherwise the pointer to the new list. */
+//创建一个List对象
 list *listCreate(void)
 {
     struct list *list;
@@ -55,6 +56,7 @@ list *listCreate(void)
 /* Free the whole list.
  *
  * This function can't fail. */
+//释放List对象
 void listRelease(list *list)
 {
     unsigned long len;
@@ -77,6 +79,7 @@ void listRelease(list *list)
  * On error, NULL is returned and no operation is performed (i.e. the
  * list remains unaltered).
  * On success the 'list' pointer you pass to the function is returned. */
+//在head节点之前增加一个新的节点
 list *listAddNodeHead(list *list, void *value)
 {
     listNode *node;
@@ -103,6 +106,7 @@ list *listAddNodeHead(list *list, void *value)
  * On error, NULL is returned and no operation is performed (i.e. the
  * list remains unaltered).
  * On success the 'list' pointer you pass to the function is returned. */
+//在tail节点之后新增一个节点
 list *listAddNodeTail(list *list, void *value)
 {
     listNode *node;
@@ -123,6 +127,7 @@ list *listAddNodeTail(list *list, void *value)
     return list;
 }
 
+//在链表任意位置新增一个节点
 list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
     listNode *node;
 
@@ -156,6 +161,7 @@ list *listInsertNode(list *list, listNode *old_node, void *value, int after) {
  * It's up to the caller to free the private value of the node.
  *
  * This function can't fail. */
+//删除节点
 void listDelNode(list *list, listNode *node)
 {
     if (node->prev)
@@ -175,6 +181,7 @@ void listDelNode(list *list, listNode *node)
  * call to listNext() will return the next element of the list.
  *
  * This function can't fail. */
+//获取迭代器
 listIter *listGetIterator(list *list, int direction)
 {
     listIter *iter;
@@ -194,6 +201,7 @@ void listReleaseIterator(listIter *iter) {
 }
 
 /* Create an iterator in the list private iterator structure */
+//将List反向
 void listRewind(list *list, listIter *li) {
     li->next = list->head;
     li->direction = AL_START_HEAD;
@@ -218,6 +226,7 @@ void listRewindTail(list *list, listIter *li) {
  * }
  *
  * */
+//迭代器下一个节点
 listNode *listNext(listIter *iter)
 {
     listNode *current = iter->next;
@@ -239,6 +248,7 @@ listNode *listNext(listIter *iter)
  * the original node is used as value of the copied node.
  *
  * The original list both on success or error is never modified. */
+//复制List对象
 list *listDup(list *orig)
 {
     list *copy;
@@ -282,6 +292,7 @@ list *listDup(list *orig)
  * On success the first matching node pointer is returned
  * (search starts from head). If no matching node exists
  * NULL is returned. */
+//查找节点
 listNode *listSearchKey(list *list, void *key)
 {
     listIter *iter;
