@@ -35,12 +35,15 @@
 
 #include <sys/types.h>
 #include <stdarg.h>
-
+//Simple Dynamic String
 typedef char *sds;
 
 struct sdshdr {
+	//buf已使用长度
     int len;
+    //buf剩余空间长度
     int free;
+    //实际保存字符串的字符数组(柔性数组，不占用struct空间长度)
     char buf[];
 };
 
