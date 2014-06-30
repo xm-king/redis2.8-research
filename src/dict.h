@@ -45,6 +45,7 @@
 #define DICT_NOTUSED(V) ((void) V)
 
 //字典 key-value Entry
+//每个bucket通过一个dictEntry的单链表来解决Hash的冲突
 typedef struct dictEntry {
     void *key;
     union {
@@ -81,6 +82,7 @@ typedef struct dict {
     //私有数据
     void *privdata;
     //两个Hash表
+    //rehash的时候可以平滑的迁移数据
     dictht ht[2];
     //记录rehash进度的标识，-1表示没有在进行rehash
     int rehashidx; /* rehashing not in progress if rehashidx == -1 */
