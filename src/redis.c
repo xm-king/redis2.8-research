@@ -1603,7 +1603,7 @@ void resetServerStats(void) {
 
 void initServer() {
     int j;
-
+    //绑定信号处理函数
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
     setupSignalHandlers();
@@ -1621,13 +1621,16 @@ void initServer() {
     server.slaveseldb = -1; /* Force to emit the first SELECT command. */
     server.unblocked_clients = listCreate();
     server.ready_keys = listCreate();
-
+    //创建共享对象
     createSharedObjects();
     adjustOpenFilesLimit();
+    //创建事件轮询
     server.el = aeCreateEventLoop(server.maxclients+REDIS_EVENTLOOP_FDSET_INCR);
+    //创建DB
     server.db = zmalloc(sizeof(redisDb)*server.dbnum);
 
     /* Open the TCP listening socket for the user commands. */
+    //打开TCP监听端口
     if (server.port != 0 &&
         listenToPort(server.port,server.ipfd,&server.ipfd_count) == REDIS_ERR)
         exit(1);
@@ -1687,6 +1690,7 @@ void initServer() {
 
     /* Create the serverCron() time event, that's our main way to process
      * background operations. */
+    //创建定时事件并绑定回调函数
     if(aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         redisPanic("Can't create the serverCron time event.");
         exit(1);
@@ -1694,6 +1698,7 @@ void initServer() {
 
     /* Create an event handler for accepting new connections in TCP and Unix
      * domain sockets. */
+    //创建socket文件事件并绑定回调函数
     for (j = 0; j < server.ipfd_count; j++) {
         if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
             acceptTcpHandler,NULL) == AE_ERR)
@@ -3165,9 +3170,11 @@ int main(int argc, char **argv) {
     if (server.maxmemory > 0 && server.maxmemory < 1024*1024) {
         redisLog(REDIS_WARNING,"WARNING: You specified a maxmemory value that is less than 1MB (current value is %llu bytes). Are you sure this is what you really want?", server.maxmemory);
     }
-
+    //设置每次进入事件前会执行的函数beforeSleep
     aeSetBeforeSleepProc(server.el,beforeSleep);
+    //进入事件轮询
     aeMain(server.el);
+    //退出事件轮询后删除事件轮询
     aeDeleteEventLoop(server.el);
     return 0;
 }
