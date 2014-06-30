@@ -452,6 +452,7 @@ void aeMain(aeEventLoop *eventLoop) {
     while (!eventLoop->stop) {
         if (eventLoop->beforesleep != NULL)
             eventLoop->beforesleep(eventLoop);
+        //处理定时事件和文件事件
         aeProcessEvents(eventLoop, AE_ALL_EVENTS);
     }
 }
