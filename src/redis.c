@@ -3075,7 +3075,9 @@ int main(int argc, char **argv) {
     srand(time(NULL)^getpid());
     gettimeofday(&tv,NULL);
     dictSetHashFunctionSeed(tv.tv_sec^tv.tv_usec^getpid());
+    //哨兵模式
     server.sentinel_mode = checkForSentinelMode(argc,argv);
+    //按照默认值初始化Server配置
     initServerConfig();
 
     /* We need to init sentinel right now as parsing the configuration file
@@ -3127,6 +3129,7 @@ int main(int argc, char **argv) {
             }
             j++;
         }
+        //如果指定配置文件，则需要加载配置文件对Server内部变量进行初始化
         if (configfile) server.configfile = getAbsolutePath(configfile);
         resetServerSaveParams();
         loadServerConfig(configfile,options);
@@ -3134,8 +3137,11 @@ int main(int argc, char **argv) {
     } else {
         redisLog(REDIS_WARNING, "Warning: no config file specified, using the default config. In order to specify a config file use %s /path/to/%s.conf", argv[0], server.sentinel_mode ? "sentinel" : "redis");
     }
+    //是否后台运行
     if (server.daemonize) daemonize();
+    //初始化Server,设置信号处理函数，监听端口，初始化事件轮询
     initServer();
+    //创建 pid file
     if (server.daemonize) createPidFile();
     redisSetProcTitle(argv[0]);
     redisAsciiArt();
