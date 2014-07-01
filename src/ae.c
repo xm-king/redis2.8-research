@@ -354,12 +354,14 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
     int processed = 0, numevents;
 
     /* Nothing to do? return ASAP */
+    //如果既不处理TimeEvent也不处理FileEvent，则直接诶返回
     if (!(flags & AE_TIME_EVENTS) && !(flags & AE_FILE_EVENTS)) return 0;
 
     /* Note that we want call select() even if there are no
      * file events to process as long as we want to process time
      * events, in order to sleep until the next time event is ready
      * to fire. */
+    //处理FileEvent
     if (eventLoop->maxfd != -1 ||
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
         int j;

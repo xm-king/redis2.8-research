@@ -1614,6 +1614,7 @@ void initServer() {
     }
 
     server.current_client = NULL;
+    //初始化Client空列表
     server.clients = listCreate();
     server.clients_to_close = listCreate();
     server.slaves = listCreate();
@@ -1623,6 +1624,7 @@ void initServer() {
     server.ready_keys = listCreate();
     //创建共享对象
     createSharedObjects();
+    //调整最大文件打开数目
     adjustOpenFilesLimit();
     //创建事件轮询
     server.el = aeCreateEventLoop(server.maxclients+REDIS_EVENTLOOP_FDSET_INCR);
