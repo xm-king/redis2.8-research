@@ -581,7 +581,7 @@ typedef struct redisOpArray {
 /*-----------------------------------------------------------------------------
  * Global server state
  *----------------------------------------------------------------------------*/
-
+//全局对象redisServer,保存服务器的相关信息(配置信息，统计信息，服务器状态等等)
 struct redisServer {
     /* General */
     char *configfile;           /* Absolute config file path, or NULL */

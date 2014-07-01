@@ -3068,15 +3068,18 @@ void redisSetProcTitle(char *title) {
 }
 
 int main(int argc, char **argv) {
-    struct timeval tv;
+    //定义时间变量
+	struct timeval tv;
 
     /* We need to initialize our libraries, and the server configuration. */
+	//替换进程标题
 #ifdef INIT_SETPROCTITLE_REPLACEMENT
     spt_init(argc, argv);
 #endif
     setlocale(LC_COLLATE,"");
     zmalloc_enable_thread_safeness();
     zmalloc_set_oom_handler(redisOutOfMemoryHandler);
+    //设置随机种子
     srand(time(NULL)^getpid());
     gettimeofday(&tv,NULL);
     dictSetHashFunctionSeed(tv.tv_sec^tv.tv_usec^getpid());
