@@ -113,6 +113,7 @@ struct redisCommand *commandTable;
  *    but just a few.
  * M: Do not automatically propagate the command on MONITOR.
  */
+//Redis所有的命令列表及处理函数
 struct redisCommand redisCommandTable[] = {
     {"get",getCommand,2,"r",0,NULL,1,1,1,0,0},
     {"set",setCommand,-3,"wm",0,noPreloadGetKeys,1,1,1,0,0},
@@ -1293,31 +1294,53 @@ void createSharedObjects(void) {
 
 void initServerConfig() {
     int j;
-
+    //生成runid
     getRandomHexChars(server.runid,REDIS_RUN_ID_SIZE);
-    server.configfile = NULL;
-    server.hz = REDIS_DEFAULT_HZ;
     server.runid[REDIS_RUN_ID_SIZE] = '\0';
+    //配置文件
+    server.configfile = NULL;
+    //Cron执行频率
+    server.hz = REDIS_DEFAULT_HZ;
+    //CPU 架构
     server.arch_bits = (sizeof(long) == 8) ? 64 : 32;
+    //默认监听端口 6379
     server.port = REDIS_SERVERPORT;
+    //设置TCP连接最大等待连接数511
     server.tcp_backlog = REDIS_TCP_BACKLOG;
+    //绑定地址的个数
     server.bindaddr_count = 0;
+    //Unix Socket文件路径
     server.unixsocket = NULL;
+    //Unix Socket文件权限
     server.unixsocketperm = REDIS_DEFAULT_UNIX_SOCKET_PERM;
+    //fd个数
     server.ipfd_count = 0;
+    //Socket fd
     server.sofd = -1;
+    //DB 个数，默认是16
     server.dbnum = REDIS_DEFAULT_DBNUM;
+    //Log Level Notice
     server.verbosity = REDIS_DEFAULT_VERBOSITY;
+    //Client 最大IDLE 0s
     server.maxidletime = REDIS_MAXIDLETIME;
+    //TCP keepalive属性
     server.tcpkeepalive = REDIS_DEFAULT_TCP_KEEPALIVE;
     server.active_expire_enabled = 1;
+    //Client最大的请求buffer长度 1G
     server.client_max_querybuf_len = REDIS_MAX_QUERYBUF_LEN;
+    //RDB savepoint 数组
     server.saveparams = NULL;
+    //是否正在load data from disk
     server.loading = 0;
+    //默认log file path
     server.logfile = zstrdup(REDIS_DEFAULT_LOGFILE);
+    //是否打开syslog
     server.syslog_enabled = REDIS_DEFAULT_SYSLOG_ENABLED;
+    //设置Syslog ident
     server.syslog_ident = zstrdup(REDIS_DEFAULT_SYSLOG_IDENT);
+    //设置Syslog facility
     server.syslog_facility = LOG_LOCAL0;
+    //是否进程后台运行
     server.daemonize = REDIS_DEFAULT_DAEMONIZE;
     server.aof_state = REDIS_AOF_OFF;
     server.aof_fsync = REDIS_DEFAULT_AOF_FSYNC;
@@ -3085,9 +3108,11 @@ int main(int argc, char **argv) {
     setlocale(LC_COLLATE,"");
     zmalloc_enable_thread_safeness();
     zmalloc_set_oom_handler(redisOutOfMemoryHandler);
-    //设置随机种子
+    //设置随机种子(当前时间+pid)
     srand(time(NULL)^getpid());
+    //获得当前精确时间
     gettimeofday(&tv,NULL);
+    //Hash函数散列种子
     dictSetHashFunctionSeed(tv.tv_sec^tv.tv_usec^getpid());
     //哨兵模式
     server.sentinel_mode = checkForSentinelMode(argc,argv);
