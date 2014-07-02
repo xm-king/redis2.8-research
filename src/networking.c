@@ -58,6 +58,7 @@ redisClient *createClient(int fd) {
      * in the context of a client. When commands are executed in other
      * contexts (for instance a Lua script) we need a non connected client. */
     if (fd != -1) {
+        //设置fd为非阻塞
         anetNonBlock(NULL,fd);
         anetEnableTcpNoDelay(NULL,fd);
         if (server.tcpkeepalive)
@@ -108,6 +109,7 @@ redisClient *createClient(int fd) {
     c->peerid = NULL;
     listSetFreeMethod(c->pubsub_patterns,decrRefCountVoid);
     listSetMatchMethod(c->pubsub_patterns,listMatchObjects);
+    //将新建的Client加入到client列表的末端
     if (fd != -1) listAddNodeTail(server.clients,c);
     initClientMultiState(c);
     return c;
@@ -276,6 +278,7 @@ void _addReplyStringToList(redisClient *c, char *s, size_t len) {
  * -------------------------------------------------------------------------- */
 
 void addReply(redisClient *c, robj *obj) {
+    //开启写句柄
     if (prepareClientToWrite(c) != REDIS_OK) return;
 
     /* This is an important place where we can avoid copy-on-write
@@ -912,6 +915,7 @@ int processInlineBuffer(redisClient *c) {
     c->argv = zmalloc(sizeof(robj*)*argc);
 
     /* Create redis objects for all arguments. */
+    //查询参数
     for (c->argc = 0, j = 0; j < argc; j++) {
         if (sdslen(argv[j])) {
             c->argv[c->argc] = createObject(REDIS_STRING,argv[j]);
@@ -1077,6 +1081,7 @@ int processMultibulkBuffer(redisClient *c) {
 
 void processInputBuffer(redisClient *c) {
     /* Keep processing while there is something in the input buffer */
+    //当缓冲区还有数据的时候
     while(sdslen(c->querybuf)) {
         /* Immediately abort if the client is in the middle of something. */
         if (c->flags & REDIS_BLOCKED) return;
@@ -1117,10 +1122,11 @@ void processInputBuffer(redisClient *c) {
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     redisClient *c = (redisClient*) privdata;
     int nread, readlen;
+    //之前已经读入到数据
     size_t qblen;
     REDIS_NOTUSED(el);
     REDIS_NOTUSED(mask);
-
+    //设置当前正在处理的Client
     server.current_client = c;
     readlen = REDIS_IOBUF_LEN;
     /* If this is a multi bulk request, and we are processing a bulk reply
