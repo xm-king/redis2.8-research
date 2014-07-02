@@ -56,7 +56,7 @@ void freeClientMultiState(redisClient *c) {
 void queueMultiCommand(redisClient *c) {
     multiCmd *mc;
     int j;
-
+    //为新命令重新分配空间
     c->mstate.commands = zrealloc(c->mstate.commands,
             sizeof(multiCmd)*(c->mstate.count+1));
     mc = c->mstate.commands+c->mstate.count;
@@ -84,11 +84,14 @@ void flagTransaction(redisClient *c) {
 }
 
 void multiCommand(redisClient *c) {
+    //判断MULTI标识，事务不可嵌套使用
     if (c->flags & REDIS_MULTI) {
         addReplyError(c,"MULTI calls can not be nested");
         return;
     }
+    //设置MULTI标识
     c->flags |= REDIS_MULTI;
+    //向客户端返回OK
     addReply(c,shared.ok);
 }
 

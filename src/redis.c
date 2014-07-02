@@ -2114,11 +2114,14 @@ int processCommand(redisClient *c) {
     }
 
     /* Exec the command */
+    // 如果已经设置了MULTI标识并且执行的命令不是EXEC DISCARD MULTI 或者 WATCH
     if (c->flags & REDIS_MULTI &&
         c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
         c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)
     {
+        //将命令放入队列
         queueMultiCommand(c);
+        //返回已入队列消息
         addReply(c,shared.queued);
     } else {
         call(c,REDIS_CALL_FULL);
