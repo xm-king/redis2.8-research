@@ -1754,8 +1754,8 @@ void initServer() {
                     "Unrecoverable error creating server.ipfd file event.");
             }
     }
-    if (server.sofd > 0 && aeCreateFileEvent(server.el,server.sofd,AE_READABLE,
-        acceptUnixHandler,NULL) == AE_ERR) redisPanic("Unrecoverable error creating server.sofd file event.");
+    if (server.sofd > 0 && aeCreateFileEvent(server.el,server.sofd,AE_READABLE,acceptUnixHandler,NULL) == AE_ERR)
+    	redisPanic("Unrecoverable error creating server.sofd file event.");
 
     /* Open the AOF file if needed. */
     if (server.aof_state == REDIS_AOF_ON) {

@@ -32,12 +32,16 @@
 /* ================================ MULTI/EXEC ============================== */
 
 /* Client state initialization for MULTI/EXEC */
+//初始化事务状态
 void initClientMultiState(redisClient *c) {
+	//命令队列
     c->mstate.commands = NULL;
+    //命令计数
     c->mstate.count = 0;
 }
 
 /* Release all the resources associated with MULTI/EXEC state */
+//释放事务
 void freeClientMultiState(redisClient *c) {
     int j;
 
@@ -53,22 +57,27 @@ void freeClientMultiState(redisClient *c) {
 }
 
 /* Add a new command into the MULTI commands queue */
+//将一个新命令添加到事务队列中
 void queueMultiCommand(redisClient *c) {
     multiCmd *mc;
     int j;
     //为新命令重新分配空间
     c->mstate.commands = zrealloc(c->mstate.commands,
             sizeof(multiCmd)*(c->mstate.count+1));
+    //指向新的元素
     mc = c->mstate.commands+c->mstate.count;
+    //初始化新的命令，参数
     mc->cmd = c->cmd;
     mc->argc = c->argc;
     mc->argv = zmalloc(sizeof(robj*)*c->argc);
     memcpy(mc->argv,c->argv,sizeof(robj*)*c->argc);
     for (j = 0; j < c->argc; j++)
         incrRefCount(mc->argv[j]);
+    //命令计数加1
     c->mstate.count++;
 }
 
+//取消事务
 void discardTransaction(redisClient *c) {
     freeClientMultiState(c);
     initClientMultiState(c);
@@ -78,6 +87,7 @@ void discardTransaction(redisClient *c) {
 
 /* Flag the transacation as DIRTY_EXEC so that EXEC will fail.
  * Should be called every time there is an error while queueing a command. */
+//增加Flag REDIS_DIRTY_EXEC，当执行队列中的Command出错的时候调用
 void flagTransaction(redisClient *c) {
     if (c->flags & REDIS_MULTI)
         c->flags |= REDIS_DIRTY_EXEC;
@@ -96,16 +106,20 @@ void multiCommand(redisClient *c) {
 }
 
 void discardCommand(redisClient *c) {
+	//如果没有设置MULTI，返回错误
     if (!(c->flags & REDIS_MULTI)) {
         addReplyError(c,"DISCARD without MULTI");
         return;
     }
+    //取消事务
     discardTransaction(c);
+    //返回OK
     addReply(c,shared.ok);
 }
 
 /* Send a MULTI command to all the slaves and AOF file. Check the execCommand
  * implementation for more information. */
+//向slave节点以及AOF文件 发送MULTI命令
 void execCommandPropagateMulti(redisClient *c) {
     robj *multistring = createStringObject("MULTI",5);
 
@@ -121,6 +135,7 @@ void execCommand(redisClient *c) {
     struct redisCommand *orig_cmd;
     int must_propagate = 0; /* Need to propagate MULTI/EXEC to AOF / slaves? */
 
+    //如果没有设置MULTI，返回错误
     if (!(c->flags & REDIS_MULTI)) {
         addReplyError(c,"EXEC without MULTI");
         return;
@@ -132,6 +147,11 @@ void execCommand(redisClient *c) {
      * A failed EXEC in the first case returns a multi bulk nil object
      * (technically it is not an error but a special behavior), while
      * in the second an EXECABORT error is returned. */
+    /*
+     * 以下情况需要终止执行事务
+     * 监视的Key被修改
+     * 出现错误
+     */
     if (c->flags & (REDIS_DIRTY_CAS|REDIS_DIRTY_EXEC)) {
         addReply(c, c->flags & REDIS_DIRTY_EXEC ? shared.execaborterr :
                                                   shared.nullmultibulk);
