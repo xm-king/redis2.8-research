@@ -809,18 +809,18 @@ typedef struct pubsubPattern {
 typedef void redisCommandProc(redisClient *c);
 typedef int *redisGetKeysProc(struct redisCommand *cmd, robj **argv, int argc, int *numkeys, int flags);
 struct redisCommand {
-    char *name;
-    redisCommandProc *proc;
-    int arity;
-    char *sflags; /* Flags as string representation, one char per flag. */
-    int flags;    /* The actual flags, obtained from the 'sflags' field. */
+    char *name;   //command 名字
+    redisCommandProc *proc; //command 对应的处理函数
+    int arity;	//参数个数
+    char *sflags; /* Flags as string representation, one char per flag. */ //command 类型
+    int flags;    /* The actual flags, obtained from the 'sflags' field. */ //运行时由sflag计算得出
     /* Use a function to determine keys arguments in a command line. */
-    redisGetKeysProc *getkeys_proc;
+    redisGetKeysProc *getkeys_proc; //获取key
     /* What keys should be loaded in background when calling this command? */
     int firstkey; /* The first argument that's a key (0 = no keys) */
     int lastkey;  /* The last argument that's a key */
-    int keystep;  /* The step between first and last key */
-    long long microseconds, calls;
+    int keystep;  /* The step between first and last key */ //key 的步长
+    long long microseconds, calls;  //command 执行时间和执行次数统计
 };
 
 struct redisFunctionSym {

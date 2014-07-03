@@ -1342,9 +1342,13 @@ void initServerConfig() {
     server.syslog_facility = LOG_LOCAL0;
     //是否进程后台运行
     server.daemonize = REDIS_DEFAULT_DAEMONIZE;
+    //AOF 状态
     server.aof_state = REDIS_AOF_OFF;
+    //fsync 函数
     server.aof_fsync = REDIS_DEFAULT_AOF_FSYNC;
+    //正在rewrite的时候，不要做fsync
     server.aof_no_fsync_on_rewrite = REDIS_DEFAULT_AOF_NO_FSYNC_ON_REWRITE;
+    //rewrite 阀值
     server.aof_rewrite_perc = REDIS_AOF_REWRITE_PERC;
     server.aof_rewrite_min_size = REDIS_AOF_REWRITE_MIN_SIZE;
     server.aof_rewrite_base_size = 0;
@@ -1358,19 +1362,30 @@ void initServerConfig() {
     server.aof_selected_db = -1; /* Make sure the first time will not match */
     server.aof_flush_postponed_start = 0;
     server.aof_rewrite_incremental_fsync = REDIS_DEFAULT_AOF_REWRITE_INCREMENTAL_FSYNC;
+    //PID file path
     server.pidfile = zstrdup(REDIS_DEFAULT_PID_FILE);
+    //rdb file
     server.rdb_filename = zstrdup(REDIS_DEFAULT_RDB_FILENAME);
+    //aof file
     server.aof_filename = zstrdup(REDIS_DEFAULT_AOF_FILENAME);
+    //访问是否需要password
     server.requirepass = NULL;
+    //rdb文件是否需要压缩
     server.rdb_compression = REDIS_DEFAULT_RDB_COMPRESSION;
+    //rdb文件是否需要checksum(校验和)
     server.rdb_checksum = REDIS_DEFAULT_RDB_CHECKSUM;
     server.stop_writes_on_bgsave_err = REDIS_DEFAULT_STOP_WRITES_ON_BGSAVE_ERROR;
+    //servCron 主动ReHash
     server.activerehashing = REDIS_DEFAULT_ACTIVE_REHASHING;
     server.notify_keyspace_events = 0;
+    //同时连接的最大Client数量
     server.maxclients = REDIS_MAX_CLIENTS;
+    //阻塞的client数量
     server.bpop_blocked_clients = 0;
+    //最大内存使用限制
     server.maxmemory = REDIS_DEFAULT_MAXMEMORY;
     server.maxmemory_policy = REDIS_DEFAULT_MAXMEMORY_POLICY;
+    //随机抽样
     server.maxmemory_samples = REDIS_DEFAULT_MAXMEMORY_SAMPLES;
     server.hash_max_ziplist_entries = REDIS_HASH_MAX_ZIPLIST_ENTRIES;
     server.hash_max_ziplist_value = REDIS_HASH_MAX_ZIPLIST_VALUE;
@@ -1380,7 +1395,9 @@ void initServerConfig() {
     server.zset_max_ziplist_entries = REDIS_ZSET_MAX_ZIPLIST_ENTRIES;
     server.zset_max_ziplist_value = REDIS_ZSET_MAX_ZIPLIST_VALUE;
     server.hll_sparse_max_bytes = REDIS_DEFAULT_HLL_SPARSE_MAX_BYTES;
+    //是否需要快速关闭
     server.shutdown_asap = 0;
+    //Master和Slave之前ping的时间间隔
     server.repl_ping_slave_period = REDIS_REPL_PING_SLAVE_PERIOD;
     server.repl_timeout = REDIS_REPL_TIMEOUT;
     server.repl_min_slaves_to_write = REDIS_DEFAULT_MIN_SLAVES_TO_WRITE;
@@ -1391,14 +1408,15 @@ void initServerConfig() {
     server.lua_timedout = 0;
     server.next_client_id = 1; /* Client IDs, start from 1 .*/
     server.loading_process_events_interval_bytes = (1024*1024*2);
-
+    //更新LRU策略时间
     updateLRUClock();
     resetServerSaveParams();
-
+    //增加SavePoints
     appendServerSaveParams(60*60,1);  /* save after 1 hour and 1 change */
     appendServerSaveParams(300,100);  /* save after 5 minutes and 100 changes */
     appendServerSaveParams(60,10000); /* save after 1 minute and 10000 changes */
     /* Replication related */
+    //设置Redis master相关属性
     server.masterauth = NULL;
     server.masterhost = NULL;
     server.masterport = 6379;
@@ -1436,9 +1454,12 @@ void initServerConfig() {
     /* Command table -- we initiialize it here as it is part of the
      * initial configuration, since command names may be changed via
      * redis.conf using the rename-command directive. */
+    //创建 Command Dict
     server.commands = dictCreate(&commandTableDictType,NULL);
     server.orig_commands = dictCreate(&commandTableDictType,NULL);
+    //填充 Command Dict
     populateCommandTable();
+    //定义几个经常需要查找的命令
     server.delCommand = lookupCommandByCString("del");
     server.multiCommand = lookupCommandByCString("multi");
     server.lpushCommand = lookupCommandByCString("lpush");
