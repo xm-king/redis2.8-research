@@ -289,7 +289,9 @@ void addReply(redisClient *c, robj *obj) {
      * we'll be able to send the object to the client without
      * messing with its page. */
     if (obj->encoding == REDIS_ENCODING_RAW) {
+    	//将发送的数据加入的发送缓冲区中
         if (_addReplyToBuffer(c,obj->ptr,sdslen(obj->ptr)) != REDIS_OK)
+        	//如果发送缓冲区空间不足放下
             _addReplyObjectToList(c,obj);
     } else if (obj->encoding == REDIS_ENCODING_INT) {
         /* Optimization: if there is room in the static buffer for 32 bytes

@@ -32,7 +32,9 @@
 #include <sys/epoll.h>
 
 typedef struct aeApiState {
+	//epoll fd
     int epfd;
+    //epoll events
     struct epoll_event *events;
 } aeApiState;
 
