@@ -500,8 +500,8 @@ typedef struct redisClient {
     sds peerid;             /* Cached peer ID. */
 
     /* Response buffer */
-    int bufpos;
-    char buf[REDIS_REPLY_CHUNK_BYTES];
+    int bufpos;   //已经写出的数据字节数
+    char buf[REDIS_REPLY_CHUNK_BYTES]; //发送数据缓冲区
 } redisClient;
 
 struct saveparam {

@@ -1618,6 +1618,7 @@ int listenToPort(int port, int *fds, int *count) {
                 server.port, server.neterr);
             return REDIS_ERR;
         }
+        //设置Socket 为No-Block
         anetNonBlock(NULL,fds[*count]);
         (*count)++;
     }
@@ -1651,7 +1652,7 @@ void initServer() {
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
     setupSignalHandlers();
-
+    //打开syslog输出
     if (server.syslog_enabled) {
         openlog(server.syslog_ident, LOG_PID | LOG_NDELAY | LOG_NOWAIT,
             server.syslog_facility);
@@ -3204,6 +3205,7 @@ int main(int argc, char **argv) {
     //创建 pid file
     if (server.daemonize) createPidFile();
     redisSetProcTitle(argv[0]);
+    //华丽丽地输出Redis的Logo
     redisAsciiArt();
 
     if (!server.sentinel_mode) {
@@ -3212,6 +3214,7 @@ int main(int argc, char **argv) {
     #ifdef __linux__
         linuxOvercommitMemoryWarning();
     #endif
+        //把数据从硬盘加载到内存
         loadDataFromDisk();
         if (server.ipfd_count > 0)
             redisLog(REDIS_NOTICE,"The server is now ready to accept connections on port %d", server.port);
