@@ -2289,7 +2289,7 @@ int time_independent_strcmp(char *a, char *b) {
     diff |= alen ^ blen;
     return diff; /* If zero strings are the same. */
 }
-
+//
 void authCommand(redisClient *c) {
     if (!server.requirepass) {
         addReplyError(c,"Client sent AUTH, but no password is set");

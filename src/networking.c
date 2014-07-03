@@ -185,21 +185,25 @@ void _addReplyObjectToList(redisClient *c, robj *o) {
     if (c->flags & REDIS_CLOSE_AFTER_REPLY) return;
 
     if (listLength(c->reply) == 0) {
+    	//如果发送队列为空，则直接加入到队列
         incrRefCount(o);
         listAddNodeTail(c->reply,o);
         c->reply_bytes += zmalloc_size_sds(o->ptr);
     } else {
+    	//拿到当前的Tail节点
         tail = listNodeValue(listLast(c->reply));
 
         /* Append to this object when possible. */
         if (tail->ptr != NULL &&
             sdslen(tail->ptr)+sdslen(o->ptr) <= REDIS_REPLY_CHUNK_BYTES)
         {
+        	//如果要加入的节点和当前Tail的节点Value长度之和小于 REDIS_REPLY_CHUNK_BYTES，则合并到Tail节点
             c->reply_bytes -= zmalloc_size_sds(tail->ptr);
             tail = dupLastObjectIfNeeded(c->reply);
             tail->ptr = sdscatlen(tail->ptr,o->ptr,sdslen(o->ptr));
             c->reply_bytes += zmalloc_size_sds(tail->ptr);
         } else {
+        	//否则，直接加入到发送队列
             incrRefCount(o);
             listAddNodeTail(c->reply,o);
             c->reply_bytes += zmalloc_size_sds(o->ptr);
@@ -291,7 +295,7 @@ void addReply(redisClient *c, robj *obj) {
     if (obj->encoding == REDIS_ENCODING_RAW) {
     	//将发送的数据加入的发送缓冲区中
         if (_addReplyToBuffer(c,obj->ptr,sdslen(obj->ptr)) != REDIS_OK)
-        	//如果发送缓冲区空间不足放下
+        	//如果发送缓冲区空间不足放下，则放入发送队列中
             _addReplyObjectToList(c,obj);
     } else if (obj->encoding == REDIS_ENCODING_INT) {
         /* Optimization: if there is room in the static buffer for 32 bytes
