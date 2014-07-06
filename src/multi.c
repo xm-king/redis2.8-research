@@ -1,4 +1,4 @@
-/*
+a/*
  * Copyright (c) 2009-2012, Salvatore Sanfilippo <antirez at gmail dot com>
  * All rights reserved.
  *
@@ -229,6 +229,7 @@ void watchForKey(redisClient *c, robj *key) {
     watchedKey *wk;
 
     /* Check if we are already watching for this key */
+    //查看Client是否已经watch该key，如果已经watch，则返回
     listRewind(c->watched_keys,&li);
     while((ln = listNext(&li))) {
         wk = listNodeValue(ln);
@@ -236,14 +237,18 @@ void watchForKey(redisClient *c, robj *key) {
             return; /* Key already watched */
     }
     /* This key is not already watched in this DB. Let's add it */
+    //查找出已经watch该key的所有的clients
     clients = dictFetchValue(c->db->watched_keys,key);
+    //如果之前没有client watch该key，则新建一个
     if (!clients) { 
         clients = listCreate();
         dictAdd(c->db->watched_keys,key,clients);
         incrRefCount(key);
     }
+    //将client加入到列表中
     listAddNodeTail(clients,c);
     /* Add the new key to the list of keys watched by this client */
+    //将该Key也加入到该Client的 Watch keys 列表中
     wk = zmalloc(sizeof(*wk));
     wk->key = key;
     wk->db = c->db;
@@ -329,13 +334,15 @@ void touchWatchedKeysOnFlush(int dbid) {
 
 void watchCommand(redisClient *c) {
     int j;
-
+    //如果没有打开事务，则返回错误
     if (c->flags & REDIS_MULTI) {
         addReplyError(c,"WATCH inside MULTI is not allowed");
         return;
     }
+    //开始监听Key
     for (j = 1; j < c->argc; j++)
         watchForKey(c,c->argv[j]);
+    //返回OK
     addReply(c,shared.ok);
 }
 
