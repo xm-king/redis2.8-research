@@ -410,10 +410,12 @@ need_full_resync:
 /* SYNC ad PSYNC command implemenation. */
 void syncCommand(redisClient *c) {
     /* ignore SYNC if already slave or in monitor mode */
+    //对于Redis Server来说，该Client已经是slave，则返回
     if (c->flags & REDIS_SLAVE) return;
 
     /* Refuse SYNC requests if we are a slave but the link with our master
      * is not ok... */
+    //如果该Redis Server也是slave，且与master的连接断开，则拒绝SYNC
     if (server.masterhost && server.repl_state != REDIS_REPL_CONNECTED) {
         addReplyError(c,"Can't SYNC while not connected with my master");
         return;
