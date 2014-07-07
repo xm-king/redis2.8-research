@@ -58,7 +58,7 @@ struct sharedObjectsStruct shared;
 /* Global vars that are actually used as constants. The following double
  * values are used for double on-disk serialization, and are initialized
  * at runtime to avoid strange compiler optimizations. */
-
+//全局常量
 double R_Zero, R_PosInf, R_NegInf, R_Nan;
 
 /*================================= Globals ================================= */
@@ -71,20 +71,20 @@ struct redisCommand *commandTable;
  *
  * Every entry is composed of the following fields:
  *
- * name: a string representing the command name.
- * function: pointer to the C function implementing the command.
- * arity: number of arguments, it is possible to use -N to say >= N
- * sflags: command flags as string. See below for a table of flags.
+ * name: a string representing the command name.  命令名字
+ * function: pointer to the C function implementing the command. 命令函数指针
+ * arity: number of arguments, it is possible to use -N to say >= N 命令的参数个数，负数表示大于等于N
+ * sflags: command flags as string. See below for a table of flags. //命令的flag，用于运行时计算flags
  * flags: flags as bitmask. Computed by Redis using the 'sflags' field.
  * get_keys_proc: an optional function to get key arguments from a command.
  *                This is only used when the following three fields are not
  *                enough to specify what arguments are keys.
- * first_key_index: first argument that is a key
- * last_key_index: last argument that is a key
+ * first_key_index: first argument that is a key 第一个key的位置
+ * last_key_index: last argument that is a key 最后一个key的位置
  * key_step: step to get all the keys from first to last argument. For instance
- *           in MSET the step is two since arguments are key,val,key,val,...
- * microseconds: microseconds of total execution time for this command.
- * calls: total number of calls of this command.
+ *           in MSET the step is two since arguments are key,val,key,val,... key的步长
+ * microseconds: microseconds of total execution time for this command. 执行命令的时间统计
+ * calls: total number of calls of this command. 命令调用次数统计
  *
  * The flags, microseconds and calls fields are computed by Redis and should
  * always be set to zero.
