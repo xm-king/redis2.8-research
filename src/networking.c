@@ -951,12 +951,13 @@ int processMultibulkBuffer(redisClient *c) {
     char *newline = NULL;
     int pos = 0, ok;
     long long ll;
-
+    //读入命令参数的个数
     if (c->multibulklen == 0) {
         /* The client should have been reset */
         redisAssertWithInfo(c,NULL,c->argc == 0);
 
         /* Multi bulk length cannot be read without a \r\n */
+        //检测QueryBuffer的第一个"\r\n"
         newline = strchr(c->querybuf,'\r');
         if (newline == NULL) {
             if (sdslen(c->querybuf) > REDIS_INLINE_MAX_SIZE) {
@@ -967,19 +968,22 @@ int processMultibulkBuffer(redisClient *c) {
         }
 
         /* Buffer should also contain \n */
+        //Buffer中应该还包括\n字符
         if (newline-(c->querybuf) > ((signed)sdslen(c->querybuf)-2))
             return REDIS_ERR;
 
         /* We know for sure there is a whole line since newline != NULL,
          * so go ahead and find out the multi bulk length. */
+        //协议的第一个字符应当是*
         redisAssertWithInfo(c,NULL,c->querybuf[0] == '*');
+        //取得multibulk的长度
         ok = string2ll(c->querybuf+1,newline-(c->querybuf+1),&ll);
         if (!ok || ll > 1024*1024) {
             addReplyError(c,"Protocol error: invalid multibulk length");
             setProtocolError(c,pos);
             return REDIS_ERR;
         }
-
+        //multibulk的开始索引
         pos = (newline-c->querybuf)+2;
         if (ll <= 0) {
             sdsrange(c->querybuf,pos,-1);
@@ -1019,7 +1023,7 @@ int processMultibulkBuffer(redisClient *c) {
                 setProtocolError(c,pos);
                 return REDIS_ERR;
             }
-
+            //取得bulk的长度值
             ok = string2ll(c->querybuf+pos+1,newline-(c->querybuf+pos+1),&ll);
             if (!ok || ll < 0 || ll > 512*1024*1024) {
                 addReplyError(c,"Protocol error: invalid bulk length");
@@ -1047,6 +1051,7 @@ int processMultibulkBuffer(redisClient *c) {
         }
 
         /* Read bulk argument */
+        //read bulk参数值
         if (sdslen(c->querybuf)-pos < (unsigned)(c->bulklen+2)) {
             /* Not enough data (+2 == trailing \r\n) */
             break;
@@ -1100,6 +1105,7 @@ void processInputBuffer(redisClient *c) {
         /* Determine request type when unknown. */
         if (!c->reqtype) {
             if (c->querybuf[0] == '*') {
+            	//多条批量查询
                 c->reqtype = REDIS_REQ_MULTIBULK;
             } else {
                 c->reqtype = REDIS_REQ_INLINE;
@@ -1142,6 +1148,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
      * at the risk of requiring more read(2) calls. This way the function
      * processMultiBulkBuffer() can avoid copying buffers to create the
      * Redis Object representing the argument. */
+    //如果是多条批量查询
     if (c->reqtype == REDIS_REQ_MULTIBULK && c->multibulklen && c->bulklen != -1
         && c->bulklen >= REDIS_MBULK_BIG_ARG)
     {
@@ -1151,8 +1158,11 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     }
 
     qblen = sdslen(c->querybuf);
+    //如果已读取的数据大于峰值，将峰值设置为当前的已读取数据的长度
     if (c->querybuf_peak < qblen) c->querybuf_peak = qblen;
+    //为QueryBuffer申请新的空间，使得剩余空间不小于readlen
     c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
+    //开始读取不超过readlen长度的字节数
     nread = read(fd, c->querybuf+qblen, readlen);
     if (nread == -1) {
         if (errno == EAGAIN) {
@@ -1168,13 +1178,17 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
         return;
     }
     if (nread) {
+    	//更新QueryBuffer长度
         sdsIncrLen(c->querybuf,nread);
+        //更新RedisClient与RedisServer交互的时间
         c->lastinteraction = server.unixtime;
+        //如果作为集群中的Master，更新replication属性
         if (c->flags & REDIS_MASTER) c->reploff += nread;
     } else {
         server.current_client = NULL;
         return;
     }
+    //如果当前Client的QueryBuffer长度超过了Server允许的最大的长度，清空缓冲区并释放客户端
     if (sdslen(c->querybuf) > server.client_max_querybuf_len) {
         sds ci = catClientInfoString(sdsempty(),c), bytes = sdsempty();
 
