@@ -362,13 +362,14 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
      * file events to process as long as we want to process time
      * events, in order to sleep until the next time event is ready
      * to fire. */
-    //处理FileEvent
+    //注册过FileEvent || 需要处理TIME_EVENTS并且需要等待事件发生(可能会有阻塞事件发生)
     if (eventLoop->maxfd != -1 ||
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
         int j;
         aeTimeEvent *shortest = NULL;
         struct timeval tv, *tvp;
 
+        //获得最近马上就要发生的TIME_EVENT
         if (flags & AE_TIME_EVENTS && !(flags & AE_DONT_WAIT))
             shortest = aeSearchNearestTimer(eventLoop);
         if (shortest) {
@@ -376,8 +377,10 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
             /* Calculate the time missing for the nearest
              * timer to fire. */
+            //计算最近的时间事件还需要多久时间发生
             aeGetTime(&now_sec, &now_ms);
             tvp = &tv;
+            //计算当前时间和时间事件期望发生时间的间隔
             tvp->tv_sec = shortest->when_sec - now_sec;
             if (shortest->when_ms < now_ms) {
                 tvp->tv_usec = ((shortest->when_ms+1000) - now_ms)*1000;
@@ -385,17 +388,21 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             } else {
                 tvp->tv_usec = (shortest->when_ms - now_ms)*1000;
             }
+            //时间差小于0，说明事件可以执行了，设置epoll不阻塞，即如果没有文件事件，马上返回，执行时间事件
             if (tvp->tv_sec < 0) tvp->tv_sec = 0;
             if (tvp->tv_usec < 0) tvp->tv_usec = 0;
         } else {
             /* If we have to check for events but need to return
              * ASAP because of AE_DONT_WAIT we need to set the timeout
              * to zero */
+        	//没有时间事件注册
             if (flags & AE_DONT_WAIT) {
+            	//设置文件事件不阻塞
                 tv.tv_sec = tv.tv_usec = 0;
                 tvp = &tv;
             } else {
                 /* Otherwise we can block */
+            	//文件事件可以阻塞直至有事件发生为止
                 tvp = NULL; /* wait forever */
             }
         }

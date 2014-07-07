@@ -1124,7 +1124,7 @@ void processInputBuffer(redisClient *c) {
         }
     }
 }
-
+//读取redisClient缓冲区内容
 void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     redisClient *c = (redisClient*) privdata;
     int nread, readlen;
@@ -1134,6 +1134,7 @@ void readQueryFromClient(aeEventLoop *el, int fd, void *privdata, int mask) {
     REDIS_NOTUSED(mask);
     //设置当前正在处理的Client
     server.current_client = c;
+    //读入长度 16KB
     readlen = REDIS_IOBUF_LEN;
     /* If this is a multi bulk request, and we are processing a bulk reply
      * that is large enough, try to maximize the probability that the query
