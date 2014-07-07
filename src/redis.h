@@ -421,14 +421,14 @@ typedef struct redisDb {
 
 /* Client MULTI/EXEC state */
 typedef struct multiCmd {
-    robj **argv;
-    int argc;
-    struct redisCommand *cmd;
+    robj **argv;			  //redis Command 参数列表
+    int argc; 				  //redis Command 参数个数
+    struct redisCommand *cmd; //redis Command 结构体
 } multiCmd;
 
 typedef struct multiState {
-    multiCmd *commands;     /* Array of MULTI commands */
-    int count;              /* Total number of MULTI commands */
+    multiCmd *commands;     /* Array of MULTI commands */  //事务中的Command列表
+    int count;              /* Total number of MULTI commands */ //事务中的Command的个数
     int minreplicas;        /* MINREPLICAS for synchronous replication */
     time_t minreplicas_timeout; /* MINREPLICAS timeout as unixtime. */
 } multiState;
@@ -492,10 +492,10 @@ typedef struct redisClient {
     long long repl_ack_time;/* replication ack time, if this is a slave */
     char replrunid[REDIS_RUN_ID_SIZE+1]; /* master run id if this is a master */
     int slave_listening_port; /* As configured with: SLAVECONF listening-port */
-    multiState mstate;      /* MULTI/EXEC state */
+    multiState mstate;      /* MULTI/EXEC state */  //事务的执行状态
     blockingState bpop;   /* blocking state */
-    list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */
-    dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
+    list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */  //Client监视的key
+    dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */ //感兴趣的发布订阅的频道
     list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
     sds peerid;             /* Cached peer ID. */
 
@@ -585,7 +585,7 @@ typedef struct redisOpArray {
 struct redisServer {
     /* General */
     char *configfile;           /* Absolute config file path, or NULL */
-    int hz;                     /* serverCron() calls frequency in hertz */
+    int hz;                     /* serverCron() calls frequency in hertz */  //事件任务执行的频率 默认为10HZ
     redisDb *db;
     dict *commands;             /* Command table */
     dict *orig_commands;        /* Command table before command renaming. */
