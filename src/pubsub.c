@@ -49,16 +49,19 @@ int listMatchPubsubPattern(void *a, void *b) {
 
 /* Subscribe a client to a channel. Returns 1 if the operation succeeded, or
  * 0 if the client was already subscribed to that channel. */
+//RedisClient 注册到某个频道，注册成功返回1，如果已经注册则返回0
 int pubsubSubscribeChannel(redisClient *c, robj *channel) {
     struct dictEntry *de;
     list *clients = NULL;
     int retval = 0;
 
     /* Add the channel to the client -> channels hash table */
+    // 将希望订阅的频道注册到RedisClient的pubsub_channels字典中
     if (dictAdd(c->pubsub_channels,channel,NULL) == DICT_OK) {
         retval = 1;
         incrRefCount(channel);
         /* Add the client to the channel -> list of clients hash table */
+        //添加到Server的pubsub_channels字典中
         de = dictFind(server.pubsub_channels,channel);
         if (de == NULL) {
             clients = listCreate();
@@ -67,6 +70,7 @@ int pubsubSubscribeChannel(redisClient *c, robj *channel) {
         } else {
             clients = dictGetVal(de);
         }
+        //添加到对该频道注册的Client列表中
         listAddNodeTail(clients,c);
     }
     /* Notify the client */
