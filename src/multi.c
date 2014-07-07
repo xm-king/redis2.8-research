@@ -1,4 +1,4 @@
-a/*
+/*
  * Copyright (c) 2009-2012, Salvatore Sanfilippo <antirez at gmail dot com>
  * All rights reserved.
  *
@@ -32,7 +32,7 @@ a/*
 /* ================================ MULTI/EXEC ============================== */
 
 /* Client state initialization for MULTI/EXEC */
-//初始化事务状态
+//初始化RedisClient的事务状态
 void initClientMultiState(redisClient *c) {
 	//命令队列
     c->mstate.commands = NULL;
@@ -41,7 +41,7 @@ void initClientMultiState(redisClient *c) {
 }
 
 /* Release all the resources associated with MULTI/EXEC state */
-//释放事务
+//释放事务以及相关的资源
 void freeClientMultiState(redisClient *c) {
     int j;
 
@@ -94,7 +94,7 @@ void flagTransaction(redisClient *c) {
 }
 
 void multiCommand(redisClient *c) {
-    //判断MULTI标识，事务不可嵌套使用
+    //判断MULTI标识位，事务不可嵌套使用
     if (c->flags & REDIS_MULTI) {
         addReplyError(c,"MULTI calls can not be nested");
         return;
@@ -258,6 +258,7 @@ void watchForKey(redisClient *c, robj *key) {
 
 /* Unwatch all the keys watched by this client. To clean the EXEC dirty
  * flag is up to the caller. */
+//清理Client监视的所有key
 void unwatchAllKeys(redisClient *c) {
     listIter li;
     listNode *ln;
@@ -271,6 +272,7 @@ void unwatchAllKeys(redisClient *c) {
         /* Lookup the watched key -> clients list and remove the client
          * from the list */
         wk = listNodeValue(ln);
+        //从监视key的client列表中删除该client
         clients = dictFetchValue(wk->db->watched_keys, wk->key);
         redisAssertWithInfo(c,NULL,clients != NULL);
         listDelNode(clients,listSearchKey(clients,c));
@@ -286,6 +288,7 @@ void unwatchAllKeys(redisClient *c) {
 
 /* "Touch" a key, so that if this key is being WATCHed by some client the
  * next EXEC will fail. */
+//touch key，如果这个key正在被一些Client监视，则接下来的EXEC将会失败
 void touchWatchedKey(redisDb *db, robj *key) {
     list *clients;
     listIter li;
@@ -297,6 +300,7 @@ void touchWatchedKey(redisDb *db, robj *key) {
 
     /* Mark all the clients watching this key as REDIS_DIRTY_CAS */
     /* Check if we are already watching for this key */
+    //遍历所有的监视该Key的Client，设置标识位REDIS_DIRTY_CAS
     listRewind(clients,&li);
     while((ln = listNext(&li))) {
         redisClient *c = listNodeValue(ln);
