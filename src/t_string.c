@@ -64,8 +64,9 @@ static int checkStringLength(redisClient *c, long long size) {
 
 void setGenericCommand(redisClient *c, int flags, robj *key, robj *val, robj *expire, int unit, robj *ok_reply, robj *abort_reply) {
     long long milliseconds = 0; /* initialized to avoid any harmness warning */
-
+    //如果设置了失效时间
     if (expire) {
+    	//将时间转化为毫秒
         if (getLongLongFromObjectOrReply(c, expire, &milliseconds, NULL) != REDIS_OK)
             return;
         if (milliseconds <= 0) {
@@ -81,8 +82,11 @@ void setGenericCommand(redisClient *c, int flags, robj *key, robj *val, robj *ex
         addReply(c, abort_reply ? abort_reply : shared.nullbulk);
         return;
     }
+    //添加键值对
     setKey(c->db,key,val);
+    //增加脏数据
     server.dirty++;
+    //设置失效时间
     if (expire) setExpire(c->db,key,mstime()+milliseconds);
     notifyKeyspaceEvent(REDIS_NOTIFY_STRING,"set",key,c->db->id);
     if (expire) notifyKeyspaceEvent(REDIS_NOTIFY_GENERIC,
@@ -103,13 +107,13 @@ void setCommand(redisClient *c) {
 
         if ((a[0] == 'n' || a[0] == 'N') &&
             (a[1] == 'x' || a[1] == 'X') && a[2] == '\0') {
-            flags |= REDIS_SET_NX;
+            flags |= REDIS_SET_NX; //SET IF KEY NOT EXISTS
         } else if ((a[0] == 'x' || a[0] == 'X') &&
                    (a[1] == 'x' || a[1] == 'X') && a[2] == '\0') {
-            flags |= REDIS_SET_XX;
+            flags |= REDIS_SET_XX;	//SET IF KEY EXISTS
         } else if ((a[0] == 'e' || a[0] == 'E') &&
                    (a[1] == 'x' || a[1] == 'X') && a[2] == '\0' && next) {
-            unit = UNIT_SECONDS;
+            unit = UNIT_SECONDS;	//Expires Flag
             expire = next;
             j++;
         } else if ((a[0] == 'p' || a[0] == 'P') &&

@@ -402,6 +402,7 @@ typedef struct redisObject {
  * Note that this macro is taken near the structure definition to make sure
  * we'll update it when the structure is changed, to avoid bugs like
  * bug #85 introduced exactly in this way. */
+//初始化一个StringObject
 #define initStaticStringObject(_var,_ptr) do { \
     _var.refcount = 1; \
     _var.type = REDIS_STRING; \
@@ -410,10 +411,14 @@ typedef struct redisObject {
 } while(0);
 
 typedef struct redisDb {
+	//保存数据库中的所有键值对，称为键空间
     dict *dict;                 /* The keyspace for this DB */
+    //保存键的失效信息
     dict *expires;              /* Timeout of keys with a timeout set */
+    //保存阻塞操作的key
     dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP) */
     dict *ready_keys;           /* Blocked keys that received a PUSH */
+    //保存监视的key
     dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
     int id;
     long long avg_ttl;          /* Average TTL, just for stats */
