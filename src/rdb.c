@@ -40,12 +40,14 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 
+//将长度为len的字符数组写入到RDB中
+//写入成功返回len，失败返回-1
 static int rdbWriteRaw(rio *rdb, void *p, size_t len) {
     if (rdb && rioWrite(rdb,p,len) == 0)
         return -1;
     return len;
 }
-
+//将单个字符写入到RDB中
 int rdbSaveType(rio *rdb, unsigned char type) {
     return rdbWriteRaw(rdb,&type,1);
 }
@@ -53,23 +55,24 @@ int rdbSaveType(rio *rdb, unsigned char type) {
 /* Load a "type" in RDB format, that is a one byte unsigned integer.
  * This function is not only used to load object types, but also special
  * "types" like the end-of-file type, the EXPIRE type, and so forth. */
+//从RDB文件中读入单个字符
 int rdbLoadType(rio *rdb) {
     unsigned char type;
     if (rioRead(rdb,&type,1) == 0) return -1;
     return type;
 }
-
+//读取时间，长度为4
 time_t rdbLoadTime(rio *rdb) {
     int32_t t32;
     if (rioRead(rdb,&t32,4) == 0) return -1;
     return (time_t)t32;
 }
-
+//保存毫秒，长度为8
 int rdbSaveMillisecondTime(rio *rdb, long long t) {
     int64_t t64 = (int64_t) t;
     return rdbWriteRaw(rdb,&t64,8);
 }
-
+//读取毫秒，长度为8
 long long rdbLoadMillisecondTime(rio *rdb) {
     int64_t t64;
     if (rioRead(rdb,&t64,8) == 0) return -1;
@@ -79,6 +82,7 @@ long long rdbLoadMillisecondTime(rio *rdb) {
 /* Saves an encoded length. The first two bits in the first byte are used to
  * hold the encoding type. See the REDIS_RDB_* definitions for more information
  * on the types of encoding. */
+//对len编码后，写入RDB文件
 int rdbSaveLen(rio *rdb, uint32_t len) {
     unsigned char buf[2];
     size_t nwritten;
@@ -108,6 +112,7 @@ int rdbSaveLen(rio *rdb, uint32_t len) {
 /* Load an encoded length. The "isencoded" argument is set to 1 if the length
  * is not actually a length but an "encoding type". See the REDIS_RDB_ENC_*
  * definitions in rdb.h for more information. */
+//读取一个编码的整数值
 uint32_t rdbLoadLen(rio *rdb, int *isencoded) {
     unsigned char buf[2];
     uint32_t len;
@@ -614,12 +619,15 @@ int rdbSaveKeyValuePair(rio *rdb, robj *key, robj *val,
     /* Save the expire time */
     if (expiretime != -1) {
         /* If this key is already expired skip it */
+        //如果键已经失效，则跳过
         if (expiretime < now) return 0;
+        //写入Expire Time OPCODE，以及失效时间
         if (rdbSaveType(rdb,REDIS_RDB_OPCODE_EXPIRETIME_MS) == -1) return -1;
         if (rdbSaveMillisecondTime(rdb,expiretime) == -1) return -1;
     }
 
     /* Save type, key, value */
+    //依次写入value的类型，key的值以及value的值
     if (rdbSaveObjectType(rdb,val) == -1) return -1;
     if (rdbSaveStringObject(rdb,key) == -1) return -1;
     if (rdbSaveObject(rdb,val) == -1) return -1;
@@ -637,7 +645,7 @@ int rdbSave(char *filename) {
     FILE *fp;
     rio rdb;
     uint64_t cksum;
-
+    //RDB临时文件
     snprintf(tmpfile,256,"temp-%d.rdb", (int) getpid());
     fp = fopen(tmpfile,"w");
     if (!fp) {
@@ -645,17 +653,23 @@ int rdbSave(char *filename) {
             strerror(errno));
         return REDIS_ERR;
     }
-
+    //初始化IO函数
     rioInitWithFile(&rdb,fp);
+    //设置校验和函数
     if (server.rdb_checksum)
         rdb.update_cksum = rioGenericUpdateChecksum;
+    //写入Redis 版本号,REDIS0006
     snprintf(magic,sizeof(magic),"REDIS%04d",REDIS_RDB_VERSION);
     if (rdbWriteRaw(&rdb,magic,9) == -1) goto werr;
-
+    //遍历所有的数据库
     for (j = 0; j < server.dbnum; j++) {
+        //当前数据库
         redisDb *db = server.db+j;
+        //数据库键空间
         dict *d = db->dict;
+        //跳过空数据库
         if (dictSize(d) == 0) continue;
+        //创建安全迭代器
         di = dictGetSafeIterator(d);
         if (!di) {
             fclose(fp);
@@ -663,24 +677,29 @@ int rdbSave(char *filename) {
         }
 
         /* Write the SELECT DB opcode */
+        //写入DB OPCODE
         if (rdbSaveType(&rdb,REDIS_RDB_OPCODE_SELECTDB) == -1) goto werr;
         if (rdbSaveLen(&rdb,j) == -1) goto werr;
 
         /* Iterate this DB writing every entry */
+        //遍历数据库键空间，依次写入key-value
         while((de = dictNext(di)) != NULL) {
             sds keystr = dictGetKey(de);
             robj key, *o = dictGetVal(de);
             long long expire;
-            
+            //创建一个Redis String Object
             initStaticStringObject(key,keystr);
+            //获得key的失效时间，-1表示永不失效
             expire = getExpire(db,&key);
             if (rdbSaveKeyValuePair(&rdb,&key,o,expire,now) == -1) goto werr;
         }
+        //释放迭代器
         dictReleaseIterator(di);
     }
     di = NULL; /* So that we don't release it again on error. */
 
     /* EOF opcode */
+    //写入EOF标识
     if (rdbSaveType(&rdb,REDIS_RDB_OPCODE_EOF) == -1) goto werr;
 
     /* CRC64 checksum. It will be zero if checksum computation is disabled, the
@@ -690,12 +709,14 @@ int rdbSave(char *filename) {
     rioWrite(&rdb,&cksum,8);
 
     /* Make sure data will not remain on the OS's output buffers */
+    //强制数据写入到磁盘
     if (fflush(fp) == EOF) goto werr;
     if (fsync(fileno(fp)) == -1) goto werr;
     if (fclose(fp) == EOF) goto werr;
 
     /* Use RENAME to make sure the DB file is changed atomically only
      * if the generate DB file is ok. */
+    //重命名dump.rdb
     if (rename(tmpfile,filename) == -1) {
         redisLog(REDIS_WARNING,"Error moving temp DB file on the final destination: %s", strerror(errno));
         unlink(tmpfile);
@@ -720,16 +741,19 @@ int rdbSaveBackground(char *filename) {
     long long start;
 
     if (server.rdb_child_pid != -1) return REDIS_ERR;
-
+    //记录快照之前RedisDB被修改的次数
     server.dirty_before_bgsave = server.dirty;
     server.lastbgsave_try = time(NULL);
 
     start = ustime();
+    //fork进程
     if ((childpid = fork()) == 0) {
         int retval;
 
         /* Child */
+        //关闭Listen的端口
         closeListeningSockets(0);
+        //设置进程标题
         redisSetProcTitle("redis-rdb-bgsave");
         retval = rdbSave(filename);
         if (retval == REDIS_OK) {
@@ -1230,6 +1254,7 @@ void saveCommand(redisClient *c) {
 }
 
 void bgsaveCommand(redisClient *c) {
+    //如果后台正在做RedisDB的RDB或者AOF持久化，则返回错误
     if (server.rdb_child_pid != -1) {
         addReplyError(c,"Background save already in progress");
     } else if (server.aof_child_pid != -1) {
