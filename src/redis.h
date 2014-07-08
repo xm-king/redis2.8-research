@@ -466,42 +466,42 @@ typedef struct readyList {
 /* With multiplexing we need to take per-client state.
  * Clients are taken in a liked list. */
 typedef struct redisClient {
-    uint64_t id;            /* Client incremental unique ID. */
-    int fd;
-    redisDb *db;
+    uint64_t id;            /* Client incremental unique ID. *///RedisClient的唯一标识ID
+    int fd;                 //socket 描述符
+    redisDb *db;            //redisClient对应的DB，默认是0，可以通过Select命令来选择
     int dictid;
-    robj *name;             /* As set by CLIENT SETNAME */
-    sds querybuf;
-    size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size */
-    int argc;
-    robj **argv;
-    struct redisCommand *cmd, *lastcmd;
-    int reqtype;
-    int multibulklen;       /* number of multi bulk arguments left to read */
-    long bulklen;           /* length of bulk argument in multi bulk request */
-    list *reply;
-    unsigned long reply_bytes; /* Tot bytes of objects in reply list */
-    int sentlen;            /* Amount of bytes already sent in the current
+    robj *name;             /* As set by CLIENT SETNAME *///RedisClient的名字
+    sds querybuf;            //请求查询缓冲区
+    size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size *///最近请求查询缓冲区的峰值
+    int argc;               //参数个数
+    robj **argv;            //参数对象数组
+    struct redisCommand *cmd, *lastcmd; //客户端执行的命令
+    int reqtype;            //请求的类型
+    int multibulklen;       /* number of multi bulk arguments left to read *///未读的命令内容个数
+    long bulklen;           /* length of bulk argument in multi bulk request */ //命令内容的长度
+    list *reply;            //输出队列
+    unsigned long reply_bytes; /* Tot bytes of objects in reply list *///输出队列中字节数量
+    int sentlen;            /* Amount of bytes already sent in the current //当前输出队列已经发送字节数量
                                buffer or object being sent. */
-    time_t ctime;           /* Client creation time */
+    time_t ctime;           /* Client creation time */ //RedisClient创建事件
     time_t lastinteraction; /* time of the last interaction, used for timeout */ //最后一次和RedisServer交互的时间
     time_t obuf_soft_limit_reached_time;
-    int flags;              /* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */
-    int authenticated;      /* when requirepass is non-NULL */
-    int replstate;          /* replication state if this is a slave */
-    int repldbfd;           /* replication DB file descriptor */
-    off_t repldboff;        /* replication DB file offset */
-    off_t repldbsize;       /* replication DB file size */
-    long long reploff;      /* replication offset if this is our master */
-    long long repl_ack_off; /* replication ack offset, if this is a slave */
-    long long repl_ack_time;/* replication ack time, if this is a slave */
-    char replrunid[REDIS_RUN_ID_SIZE+1]; /* master run id if this is a master */
-    int slave_listening_port; /* As configured with: SLAVECONF listening-port */
+    int flags;              /* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */ //RedisClient的状态位
+    int authenticated;      /* when requirepass is non-NULL */      //auth验证的状态
+    int replstate;          /* replication state if this is a slave */ //代表slave的client的时候，保存repl的状态
+    int repldbfd;           /* replication DB file descriptor */            //RDB文件描述符
+    off_t repldboff;        /* replication DB file offset */                //读取的RDB文件的偏移量
+    off_t repldbsize;       /* replication DB file size */                  //RDB文件的大小
+    long long reploff;      /* replication offset if this is our master */  //代表master的Client时候，repli的偏移量
+    long long repl_ack_off; /* replication ack offset, if this is a slave */    //代表slave的Client的时候，最后一次确认repl的偏移量
+    long long repl_ack_time;/* replication ack time, if this is a slave */      //代表slave的Client的时候，最后一次确认repl的事件
+    char replrunid[REDIS_RUN_ID_SIZE+1]; /* master run id if this is a master */    //代表master的client，master(Redis_Server的runid)
+    int slave_listening_port; /* As configured with: SLAVECONF listening-port */    //slave的监听端口
     multiState mstate;      /* MULTI/EXEC state */  //事务的执行状态
-    blockingState bpop;   /* blocking state */
+    blockingState bpop;   /* blocking state */          //RedisClient阻塞状态
     list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */  //Client监视的key
     dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */ //感兴趣的发布订阅的频道
-    list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
+    list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */ //感兴趣的发布订阅的频道匹配
     sds peerid;             /* Cached peer ID. */
 
     /* Response buffer */
@@ -509,8 +509,11 @@ typedef struct redisClient {
     char buf[REDIS_REPLY_CHUNK_BYTES]; //发送数据缓冲区
 } redisClient;
 
+//RDB save的执行条件
 struct saveparam {
+    //时间间隔
     time_t seconds;
+    //修改次数
     int changes;
 };
 
