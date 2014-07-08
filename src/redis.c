@@ -1985,6 +1985,7 @@ void call(redisClient *c, int flags) {
     }
 
     /* Propagate the command into the AOF and replication link */
+    //传播命令 To Slave
     if (flags & REDIS_CALL_PROPAGATE) {
         int flags = REDIS_PROPAGATE_NONE;
 
