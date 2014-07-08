@@ -63,7 +63,7 @@ void createReplicationBacklog(void) {
      * replication stream. */
     //尽管没有数据，但实际上repl的第一个字节应该是repl_offset后面的一个字节
     server.repl_backlog_off = server.master_repl_offset+1;
-    redisLog(REDIS_NOTICE, "[Backlog]: repl_backlog_idx:%d,master_repl_offset: %d,repl_backlog_off:%d",server.repl_backlog_idx,server.master_repl_offset,server.repl_backlog_off);
+    redisLog(REDIS_NOTICE, "[Backlog]: repl_backlog_idx:%lld,master_repl_offset: %lld,repl_backlog_off:%lld",server.repl_backlog_idx,server.master_repl_offset,server.repl_backlog_off);
 }
 
 /* This function is called when the user modifies the replication backlog
@@ -72,6 +72,7 @@ void createReplicationBacklog(void) {
  * it contains the same data as the previous one (possibly less data, but
  * the most recent bytes, or the same data and more free space in case the
  * buffer is enlarged). */
+//调整Backlog的大小
 void resizeReplicationBacklog(long long newsize) {
     if (newsize < REDIS_REPL_BACKLOG_MIN_SIZE)
         newsize = REDIS_REPL_BACKLOG_MIN_SIZE;
@@ -347,7 +348,10 @@ long long addReplyReplicationBacklog(redisClient *c, long long offset) {
 }
 
 /* This function handles the PSYNC command from the point of view of a
- * master receiving a request for partial resynchronization.
+ * master receiving a request for
+ *
+ *
+ * .
  *
  * On success return REDIS_OK, otherwise REDIS_ERR is returned and we proceed
  * with the usual full resync. */
@@ -851,6 +855,7 @@ void readSyncBulkPayload(aeEventLoop *el, int fd, void *privdata, int mask) {
         }
         redisLog(REDIS_NOTICE, "MASTER <-> SLAVE sync: Flushing old data");
         signalFlushedDb(-1);
+        //清空Redis DB
         emptyDb(replicationEmptyDbCallback);
         /* Before loading the DB into memory we need to delete the readable
          * handler, otherwise it will get called recursively since
@@ -858,6 +863,7 @@ void readSyncBulkPayload(aeEventLoop *el, int fd, void *privdata, int mask) {
          * time for non blocking loading. */
         aeDeleteFileEvent(server.el,server.repl_transfer_s,AE_READABLE);
         redisLog(REDIS_NOTICE, "MASTER <-> SLAVE sync: Loading DB in memory");
+        //将RDB文件重新加载到内存
         if (rdbLoad(server.rdb_filename) != REDIS_OK) {
             redisLog(REDIS_WARNING,"Failed trying to load the MASTER synchronization DB from disk");
             replicationAbortSyncTransfer();
@@ -1085,6 +1091,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
      * make sure the master is able to reply before going into the actual
      * replication process where we have long timeouts in the order of
      * seconds (in the meantime the slave would block). */
+    //第一步向Master发送PING命令，修改replState为REDIS_REPL_RECEIVE_PONG
     if (server.repl_state == REDIS_REPL_CONNECTING) {
         redisLog(REDIS_NOTICE,"Non blocking connect for SYNC fired the event.");
         /* Delete the writable event so that the readable event remains
@@ -1098,6 +1105,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
     }
 
     /* Receive the PONG command. */
+    //接收PONG
     if (server.repl_state == REDIS_REPL_RECEIVE_PONG) {
         char buf[1024];
 
@@ -1164,6 +1172,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
      * to start a full resynchronization so that we get the master run id
      * and the global offset, to try a partial resync at the next
      * reconnection attempt. */
+    //尝试增量同步
     psync_result = slaveTryPartialResynchronization(fd);
     if (psync_result == PSYNC_CONTINUE) {
         redisLog(REDIS_NOTICE, "MASTER <-> SLAVE sync: Master accepted a Partial Resynchronization.");
@@ -1175,6 +1184,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
      * already populated. */
     if (psync_result == PSYNC_NOT_SUPPORTED) {
         redisLog(REDIS_NOTICE,"Retrying with SYNC...");
+        //向Master发送SYNC命令
         if (syncWrite(fd,"SYNC\r\n",6,server.repl_syncio_timeout*1000) == -1) {
             redisLog(REDIS_WARNING,"I/O error writing to MASTER: %s",
                 strerror(errno));
@@ -1183,6 +1193,7 @@ void syncWithMaster(aeEventLoop *el, int fd, void *privdata, int mask) {
     }
 
     /* Prepare a suitable temp file for bulk transfer */
+    //Slave接收到的内容写入到临时文件中
     while(maxtries--) {
         snprintf(tmpfile,256,
             "temp-%d.%ld.rdb",(int)server.unixtime,(long int)getpid());
@@ -1230,7 +1241,7 @@ int connectWithMaster(void) {
             strerror(errno));
         return REDIS_ERR;
     }
-
+    //创建文件事件，并指定回调函数syncWithMaster，用于处理和Master的SYNC
     if (aeCreateFileEvent(server.el,fd,AE_READABLE|AE_WRITABLE,syncWithMaster,NULL) ==
             AE_ERR)
     {
@@ -1649,6 +1660,7 @@ void replicationCron(void) {
     }
 
     /* Check if we should connect to a MASTER */
+    //尝试连接Master
     if (server.repl_state == REDIS_REPL_CONNECT) {
         redisLog(REDIS_NOTICE,"Connecting to MASTER %s:%d",
             server.masterhost, server.masterport);
