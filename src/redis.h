@@ -711,13 +711,13 @@ struct redisServer {
     int syslog_facility;            /* Syslog facility */
     /* Replication (master) */
     int slaveseldb;                 /* Last SELECTed DB in replication output */
-    long long master_repl_offset;   /* Global replication offset */
+    long long master_repl_offset;   /* Global replication offset */      		 //全局replicate偏移量
     int repl_ping_slave_period;     /* Master pings the slave every N seconds */
-    char *repl_backlog;             /* Replication backlog for partial syncs */
-    long long repl_backlog_size;    /* Backlog circular buffer size */
-    long long repl_backlog_histlen; /* Backlog actual data length */
-    long long repl_backlog_idx;     /* Backlog circular buffer current offset */
-    long long repl_backlog_off;     /* Replication offset of first byte in the
+    char *repl_backlog;             /* Replication backlog for partial syncs */  //backlog字符环形数组
+    long long repl_backlog_size;    /* Backlog circular buffer size */			 //backlog数组的长度
+    long long repl_backlog_histlen; /* Backlog actual data length */			 //backlog的实际长度
+    long long repl_backlog_idx;     /* Backlog circular buffer current offset */ //backlog的实际索引值
+    long long repl_backlog_off;     /* Replication offset of first byte in the   //backlog中 replicate当前的位置
                                        backlog buffer. */
     time_t repl_backlog_time_limit; /* Time without slaves after the backlog
                                        gets released. */

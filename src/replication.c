@@ -44,19 +44,26 @@ void replicationResurrectCachedMaster(int newfd);
 
 void createReplicationBacklog(void) {
     redisAssert(server.repl_backlog == NULL);
+    //创建backlog数组
     server.repl_backlog = zmalloc(server.repl_backlog_size);
+    //初始化backlog
     server.repl_backlog_histlen = 0;
+    //backlog的索引值，在往backlog放入数据的时候使用
     server.repl_backlog_idx = 0;
     /* When a new backlog buffer is created, we increment the replication
      * offset by one to make sure we'll not be able to PSYNC with any
      * previous slave. This is needed because we avoid incrementing the
      * master_repl_offset if no backlog exists nor slaves are attached. */
+    //每次新创建Backlog，增加全局repl_offset,以防之前的slave引发PSYNC
+    redisLog(REDIS_NOTICE,"master_repl_offset %d",server.master_repl_offset);
     server.master_repl_offset++;
-
+    redisLog(REDIS_NOTICE,"master_repl_offset %d",server.master_repl_offset);
     /* We don't have any data inside our buffer, but virtually the first
      * byte we have is the next byte that will be generated for the
      * replication stream. */
+    //尽管没有数据，但实际上repl的第一个字节应该是repl_offset后面的一个字节
     server.repl_backlog_off = server.master_repl_offset+1;
+    redisLog(REDIS_NOTICE, "[Backlog]: repl_backlog_idx:%d,master_repl_offset: %d,repl_backlog_off:%d",server.repl_backlog_idx,server.master_repl_offset,server.repl_backlog_off);
 }
 
 /* This function is called when the user modifies the replication backlog
@@ -96,6 +103,7 @@ void freeReplicationBacklog(void) {
  * This function also increments the global replication offset stored at
  * server.master_repl_offset, because there is no case where we want to feed
  * the backlog without incrementing the buffer. */
+//添加数据到backlog中
 void feedReplicationBacklog(void *ptr, size_t len) {
     unsigned char *p = ptr;
 
@@ -103,26 +111,39 @@ void feedReplicationBacklog(void *ptr, size_t len) {
 
     /* This is a circular buffer, so write as much data we can at every
      * iteration and rewind the "idx" index if we reach the limit. */
+    //backlog是一个环状数组
     while(len) {
+    	//从idx到backlog数组尾部的剩余空间
         size_t thislen = server.repl_backlog_size - server.repl_backlog_idx;
+        //如果从idx到尾部的空间可以容纳要写入的数据，则直接写入len，否则只写入剩余空间大小的字节数
         if (thislen > len) thislen = len;
+        //将P指针指向的内容拷贝len长度到backlog
         memcpy(server.repl_backlog+server.repl_backlog_idx,p,thislen);
+        //更新idx
         server.repl_backlog_idx += thislen;
+        //如果已经到达backlog的尾部，则将idx重置为0
         if (server.repl_backlog_idx == server.repl_backlog_size)
             server.repl_backlog_idx = 0;
+        //减去已写入的字节数
         len -= thislen;
+        //移动到未被拷贝的内容
         p += thislen;
+        //更新backlog的实际长度
         server.repl_backlog_histlen += thislen;
     }
+    //backlog的实际长度不能超过backlog数组的长度
+    //这意味着数据有可能会被覆盖掉
     if (server.repl_backlog_histlen > server.repl_backlog_size)
         server.repl_backlog_histlen = server.repl_backlog_size;
     /* Set the offset of the first byte we have in the backlog. */
+    //记录backlog的第一个可读的字节
     server.repl_backlog_off = server.master_repl_offset -
                               server.repl_backlog_histlen + 1;
 }
 
 /* Wrapper for feedReplicationBacklog() that takes Redis string objects
  * as input. */
+//将redis对象加入到backlog数组中
 void feedReplicationBacklogWithObject(robj *o) {
     char llstr[REDIS_LONGSTR_SIZE];
     void *p;
@@ -146,6 +167,7 @@ void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
 
     /* If there aren't slaves, and there is no backlog buffer to populate,
      * we can return ASAP. */
+    //如果backlog为空或者slaves列表为空，则直接返回
     if (server.repl_backlog == NULL && listLength(slaves) == 0) return;
 
     /* We can't have slaves attached and no backlog. */
@@ -273,6 +295,7 @@ void replicationFeedMonitors(redisClient *c, list *monitors, int dictid, robj **
 
 /* Feed the slave 'c' with the replication backlog starting from the
  * specified 'offset' up to the end of the backlog. */
+//向RedisClient发送backloc数组中 offset到 的数据
 long long addReplyReplicationBacklog(redisClient *c, long long offset) {
     long long j, skip, len;
 
@@ -473,10 +496,12 @@ void syncCommand(redisClient *c) {
     }
 
     /* Full resynchronization. */
+    // 全量同步计数
     server.stat_sync_full++;
 
     /* Here we need to check if there is a background saving operation
      * in progress, or if it is required to start one */
+    //如果正有一个子进程在后台做RDB Save
     if (server.rdb_child_pid != -1) {
         /* Ok a background save is in progress. Let's check if it is a good
          * one for replication, i.e. if there is another slave that is
@@ -486,6 +511,7 @@ void syncCommand(redisClient *c) {
         listIter li;
 
         listRewind(server.slaves,&li);
+        //如果此时至少有一个slave在等待RDB Save完成，那么这个RDB文件就可以共用
         while((ln = listNext(&li))) {
             slave = ln->value;
             if (slave->replstate == REDIS_REPL_WAIT_BGSAVE_END) break;
@@ -504,12 +530,14 @@ void syncCommand(redisClient *c) {
         }
     } else {
         /* Ok we don't have a BGSAVE in progress, let's start one */
+    	//启动后台 RDB Save进程
         redisLog(REDIS_NOTICE,"Starting BGSAVE for SYNC");
         if (rdbSaveBackground(server.rdb_filename) != REDIS_OK) {
             redisLog(REDIS_NOTICE,"Replication failed, can't BGSAVE");
             addReplyError(c,"Unable to perform background save");
             return;
         }
+        //设置client的repl状态，正在等待BGSAVE完成
         c->replstate = REDIS_REPL_WAIT_BGSAVE_END;
         /* Flush the script cache for the new slave. */
         replicationScriptCacheFlush();
@@ -520,7 +548,9 @@ void syncCommand(redisClient *c) {
     c->repldbfd = -1;
     c->flags |= REDIS_SLAVE;
     server.slaveseldb = -1; /* Force to re-emit the SELECT command. */
+    //加入到slave列表
     listAddNodeTail(server.slaves,c);
+    //如果是第一个注册的slave，需要创建ReplicationBacklog
     if (listLength(server.slaves) == 1 && server.repl_backlog == NULL)
         createReplicationBacklog();
     return;
