@@ -337,6 +337,7 @@ int masterTryPartialResynchronization(redisClient *c) {
     /* Is the runid of this master the same advertised by the wannabe slave
      * via PSYNC? If runid changed this master is a different instance and
      * there is no way to continue. */
+    //首先判断slave保存的runid和当前server的runid是否相同，不同的话，就没有做增量更新的必要
     if (strcasecmp(master_runid, server.runid)) {
         /* Run id "?" is used by slaves that want to force a full resync. */
         if (master_runid[0] != '?') {
@@ -350,8 +351,13 @@ int masterTryPartialResynchronization(redisClient *c) {
     }
 
     /* We still have the data our slave is asking for? */
+    //取得slave的psync_offset参数
     if (getLongLongFromObjectOrReply(c,c->argv[2],&psync_offset,NULL) !=
        REDIS_OK) goto need_full_resync;
+    /**
+     *没有backlog
+     *想要同步的数据已经被覆盖
+     */
     if (!server.repl_backlog ||
         psync_offset < server.repl_backlog_off ||
         psync_offset > (server.repl_backlog_off + server.repl_backlog_histlen))
@@ -369,6 +375,7 @@ int masterTryPartialResynchronization(redisClient *c) {
      * 1) Set client state to make it a slave.
      * 2) Inform the client we can continue with +CONTINUE
      * 3) Send the backlog data (from the offset to the end) to the slave. */
+    //将client状态设置为slave
     c->flags |= REDIS_SLAVE;
     c->replstate = REDIS_REPL_ONLINE;
     c->repl_ack_time = server.unixtime;
@@ -376,11 +383,13 @@ int masterTryPartialResynchronization(redisClient *c) {
     /* We can't use the connection buffers since they are used to accumulate
      * new commands at this stage. But we are sure the socket send buffer is
      * emtpy so this write will never fail actually. */
+    //向client发送+CONTINUE,表示psync命令Accept
     buflen = snprintf(buf,sizeof(buf),"+CONTINUE\r\n");
     if (write(c->fd,buf,buflen) != buflen) {
         freeClientAsync(c);
         return REDIS_OK;
     }
+    //向Slave发送backlog中的内容
     psync_len = addReplyReplicationBacklog(c,psync_offset);
     redisLog(REDIS_NOTICE,
         "Partial resynchronization request accepted. Sending %lld bytes of backlog starting from offset %lld.", psync_len, psync_offset);
@@ -425,6 +434,7 @@ void syncCommand(redisClient *c) {
      * the client about already issued commands. We need a fresh reply
      * buffer registering the differences between the BGSAVE and the current
      * dataset, so that we can copy to other slaves if needed. */
+    //如果该client的输出队列以及输出buffer不为空，则拒绝SYNC
     if (listLength(c->reply) != 0 || c->bufpos != 0) {
         addReplyError(c,"SYNC and PSYNC are invalid with pending output");
         return;
@@ -441,6 +451,7 @@ void syncCommand(redisClient *c) {
      *
      * So the slave knows the new runid and offset to try a PSYNC later
      * if the connection with the master is lost. */
+    //如果是一个psync命令，则尝试增量同步，如果增量同步失败，则转为全量同步
     if (!strcasecmp(c->argv[0]->ptr,"psync")) {
         if (masterTryPartialResynchronization(c) == REDIS_OK) {
             server.stat_sync_partial_ok++;
